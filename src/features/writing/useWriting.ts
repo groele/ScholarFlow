@@ -65,7 +65,7 @@ export function useWriting() {
         updatedAt: new Date().toISOString(),
       });
       setActiveSectionId(templateSections[0].id);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to apply template:', e);
     }
   }, [selectedMsId]);
@@ -80,7 +80,7 @@ export function useWriting() {
         sections: updatedSections,
         updatedAt: new Date().toISOString(),
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to update section:', e);
     }
   }, [selectedMsId, sections]);
@@ -99,7 +99,7 @@ export function useWriting() {
         updatedAt: new Date().toISOString(),
       });
       setActiveSectionId(newSection.id);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to add section:', e);
     }
   }, [selectedMsId, sections]);
@@ -115,7 +115,7 @@ export function useWriting() {
       if (activeSectionId === sectionId) {
         setActiveSectionId(updated[0]?.id || '');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to delete section:', e);
     }
   }, [selectedMsId, sections, activeSectionId]);
@@ -134,7 +134,7 @@ export function useWriting() {
         sections: updated,
         updatedAt: new Date().toISOString(),
       });
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to reorder section:', e);
     }
   }, [selectedMsId, sections]);

@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@storage/dexie';
+import { db, type Submission } from '@storage/dexie';
 import { generateId } from '@storage/id';
 
 export function useSubmissions() {
@@ -34,7 +34,7 @@ export function useSubmissions() {
     setForm({ manuscriptId: '', journal: '', status: 'preparing', initialSubmissionDate: '', deadlineDate: '', notes: '' });
   }, []);
 
-  const openEdit = useCallback((item: any) => {
+  const openEdit = useCallback((item: Submission) => {
     setEditingId(item.id);
     setForm({
       manuscriptId: item.manuscriptId,
@@ -70,7 +70,7 @@ export function useSubmissions() {
       });
       resetForm();
       setIsModalOpen(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to save submission:', e);
     }
   }, [editingId, form, resetForm]);
@@ -78,7 +78,7 @@ export function useSubmissions() {
   const handleDelete = useCallback(async (id: string) => {
     try {
       await db.submissions.delete(id);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to delete submission:', e);
     }
   }, []);
@@ -88,12 +88,12 @@ export function useSubmissions() {
       const sub = await db.submissions.get(id);
       if (!sub) return;
       const now = new Date().toISOString();
-      const updates: any = { status: newStatus, updatedAt: now };
+      const updates: Partial<Submission> & { status: string; updatedAt: string } = { status: newStatus, updatedAt: now };
       if (newStatus === 'submitted' && !sub.initialSubmissionDate) updates.initialSubmissionDate = now;
       if (newStatus === 'accepted' && !sub.acceptanceDate) updates.acceptanceDate = now;
       if (newStatus === 'published' && !sub.publicationDate) updates.publicationDate = now;
       await db.submissions.update(id, updates);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to update submission status:', e);
     }
   }, []);

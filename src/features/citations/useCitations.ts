@@ -134,11 +134,16 @@ export function useCitations() {
         if (!data.title) continue;
         await db.researchRecords.add({
           id: generateId('rec'),
+          userId: 'user',
           projectId: 'proj_general',
+          schemaTemplateId: null,
           recordType: 'literature_review',
           title: data.title,
-          summary: data.abstract,
-          dataPath: data.doi ? `https://doi.org/${data.doi}` : data.url,
+          summary: data.abstract || '',
+          methodology: '',
+          recordedDate: new Date().toISOString(),
+          attributes: {},
+          dataPath: data.doi ? `https://doi.org/${data.doi}` : data.url || '',
           tags: [
             ...data.keywords,
             ...(data.authors ? [`author:${data.authors}`] : []),
@@ -146,15 +151,15 @@ export function useCitations() {
             'literature',
             'bibtex-import',
           ],
-          externalRef: data.doi || data.bibtexKey,
+          externalRef: data.doi || data.bibtexKey || null,
           readingStatus: 'unread',
           starred: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        } as any);
+        });
         imported++;
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('BibTeX import error:', e);
     }
     return imported;
@@ -169,11 +174,16 @@ export function useCitations() {
         if (!data.title) continue;
         await db.researchRecords.add({
           id: generateId('rec'),
+          userId: 'user',
           projectId: 'proj_general',
+          schemaTemplateId: null,
           recordType: 'literature_review',
           title: data.title,
-          summary: data.abstract,
-          dataPath: data.doi ? `https://doi.org/${data.doi}` : data.url,
+          summary: data.abstract || '',
+          methodology: '',
+          recordedDate: new Date().toISOString(),
+          attributes: {},
+          dataPath: data.doi ? `https://doi.org/${data.doi}` : data.url || '',
           tags: [
             ...data.keywords,
             ...(data.authors ? [`author:${data.authors}`] : []),
@@ -181,15 +191,15 @@ export function useCitations() {
             'literature',
             'ris-import',
           ],
-          externalRef: data.doi || '',
+          externalRef: data.doi || null,
           readingStatus: 'unread',
           starred: false,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        } as any);
+        });
         imported++;
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('RIS import error:', e);
     }
     return imported;

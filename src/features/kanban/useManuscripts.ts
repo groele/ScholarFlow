@@ -115,7 +115,7 @@ export function useManuscripts() {
 
       resetForm();
       setIsManuscriptModalOpen(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to save manuscript:', e);
     }
   }, [editingManuscriptId, manuscriptForm, resetForm]);
@@ -127,7 +127,7 @@ export function useManuscripts() {
       for (const sub of relatedSubs) {
         await db.submissions.delete(sub.id);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to delete manuscript:', e);
     }
   }, []);

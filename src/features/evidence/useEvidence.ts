@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@storage/dexie';
+import { db, type Evidence } from '@storage/dexie';
 import { generateId } from '@storage/id';
 
 export function useEvidence() {
@@ -34,7 +34,7 @@ export function useEvidence() {
     setForm({ title: '', description: '', evidenceType: 'figure', projectId: '', filePath: '', fileSize: 0 });
   }, []);
 
-  const openEdit = useCallback((item: any) => {
+  const openEdit = useCallback((item: Evidence) => {
     setEditingId(item.id);
     setForm({
       title: item.title,
@@ -65,7 +65,7 @@ export function useEvidence() {
       });
       resetForm();
       setIsModalOpen(false);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to save evidence:', e);
     }
   }, [editingId, form, resetForm]);
@@ -73,7 +73,7 @@ export function useEvidence() {
   const handleDelete = useCallback(async (id: string) => {
     try {
       await db.evidence.delete(id);
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Failed to delete evidence:', e);
     }
   }, []);

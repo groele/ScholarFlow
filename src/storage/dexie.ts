@@ -270,13 +270,29 @@ export async function migrateOldStorage() {
     }
     await chrome.storage.local.set({ migrated_to_dexie: true });
     return { success: true };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Migration failed:', err);
-    return { success: false, error: err.message };
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
   }
 }
 
-async function importLegacyDataToDexie(data: any) {
+interface LegacyDatabaseData {
+  projects?: Project[];
+  researchRecords?: ResearchRecord[];
+  manuscripts?: Manuscript[];
+  submissions?: Submission[];
+  tasks?: Task[];
+  researchAreas?: ResearchArea[];
+  evidence?: Evidence[];
+  schemaTemplates?: SchemaTemplate[];
+  hypotheses?: Hypothesis[];
+  experiments?: Experiment[];
+  experimentResults?: ExperimentResult[];
+  journalEntries?: JournalEntry[];
+  settings?: Record<string, unknown>;
+}
+
+async function importLegacyDataToDexie(data: LegacyDatabaseData) {
   await db.transaction('rw', [
     db.projects,
     db.researchRecords,
