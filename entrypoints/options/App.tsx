@@ -6,7 +6,7 @@ import { Spinner } from '../../src/ui/components/primitives/Spinner';
 import { ErrorBoundary } from '../../src/ui/components/primitives/ErrorBoundary';
 import './style.css';
 
-type ActiveView = 'dashboard' | 'projects' | 'records' | 'kanban' | 'submissions' | 'evidence' | 'planning' | 'reading' | 'writing' | 'citations' | 'settings';
+type ActiveView = 'dashboard' | 'projects' | 'records' | 'kanban' | 'submissions' | 'evidence' | 'planning' | 'reading' | 'writing' | 'citations' | 'journal' | 'settings';
 
 // Lazy-loaded feature views for code splitting
 const DashboardView = lazy(() => import('../../src/features/dashboard/DashboardView').then(m => ({ default: m.DashboardView })));
@@ -20,6 +20,7 @@ const PlanningView = lazy(() => import('../../src/features/planning/PlanningView
 const ReadingQueueView = lazy(() => import('../../src/features/reading/ReadingQueueView').then(m => ({ default: m.ReadingQueueView })));
 const WritingView = lazy(() => import('../../src/features/writing/WritingView').then(m => ({ default: m.WritingView })));
 const CitationsView = lazy(() => import('../../src/features/citations/CitationsView').then(m => ({ default: m.CitationsView })));
+const JournalView = lazy(() => import('../../src/features/journal/JournalView').then(m => ({ default: m.JournalView })));
 
 function LoadingFallback() {
   return (
@@ -49,6 +50,7 @@ function App() {
             {activeView === 'reading' && <ReadingQueueView />}
             {activeView === 'writing' && <WritingView />}
             {activeView === 'citations' && <CitationsView />}
+            {activeView === 'journal' && <JournalView />}
             {activeView === 'settings' && <SettingsView />}
           </Suspense>
           </ErrorBoundary>

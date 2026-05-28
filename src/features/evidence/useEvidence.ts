@@ -19,6 +19,9 @@ export function useEvidence() {
     fileSize: 0,
   });
 
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
+
   const filtered = useMemo(() => {
     if (!search.trim()) return evidence;
     const q = search.toLowerCase();
@@ -67,6 +70,7 @@ export function useEvidence() {
       setIsModalOpen(false);
     } catch (e: unknown) {
       console.error('Failed to save evidence:', e);
+      setError('Failed to save evidence. Please try again.');
     }
   }, [editingId, form, resetForm]);
 
@@ -75,6 +79,7 @@ export function useEvidence() {
       await db.evidence.delete(id);
     } catch (e: unknown) {
       console.error('Failed to delete evidence:', e);
+      setError('Failed to delete evidence. Please try again.');
     }
   }, []);
 
@@ -93,5 +98,7 @@ export function useEvidence() {
     openEdit,
     resetForm,
     handleDelete,
+    error,
+    clearError,
   };
 }

@@ -14,6 +14,8 @@ export function useReadingQueue() {
   const [projectFilter, setProjectFilter] = useState('');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'status'>('date');
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
 
   const readingQueue = useMemo(() => {
     let filtered = records.filter(r => r.recordType === 'literature_review' || r.tags.includes('literature'));
@@ -60,13 +62,23 @@ export function useReadingQueue() {
   }, [records]);
 
   const handleStatusChange = useCallback(async (id: string, status: ReadingStatus) => {
-    await db.researchRecords.update(id, { readingStatus: status, updatedAt: new Date().toISOString() });
+    try {
+      await db.researchRecords.update(id, { readingStatus: status, updatedAt: new Date().toISOString() });
+    } catch (e: unknown) {
+      console.error('Failed to update reading status:', e);
+      setError('Failed to update reading status. Please try again.');
+    }
   }, []);
 
   const handleToggleStar = useCallback(async (id: string) => {
-    const rec = await db.researchRecords.get(id);
-    if (rec) {
-      await db.researchRecords.update(id, { starred: !rec.starred, updatedAt: new Date().toISOString() });
+    try {
+      const rec = await db.researchRecords.get(id);
+      if (rec) {
+        await db.researchRecords.update(id, { starred: !rec.starred, updatedAt: new Date().toISOString() });
+      }
+    } catch (e: unknown) {
+      console.error('Failed to toggle star:', e);
+      setError('Failed to update star. Please try again.');
     }
   }, []);
 
@@ -84,5 +96,7 @@ export function useReadingQueue() {
     setSortBy,
     handleStatusChange,
     handleToggleStar,
+    error,
+    clearError,
   };
 }

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { useProjects } from './useProjects';
+import React, { useState, useMemo, useCallback } from 'react';
+import { useProjects, type ViewMode } from './useProjects';
 import { PageHeader } from '@components/layout/PageHeader';
-import { Card, CardContent } from '@components/primitives/Card';
+import { Card } from '@components/primitives/Card';
 import { Button } from '@components/primitives/Button';
 import { Badge } from '@components/primitives/Badge';
 import { Modal, ModalFooter } from '@components/primitives/Modal';
@@ -11,15 +11,35 @@ import { Select } from '@components/primitives/Select';
 import { EmptyState } from '@components/primitives/EmptyState';
 import { IconButton } from '@components/primitives/IconButton';
 import { ConfirmDialog } from '@components/primitives/ConfirmDialog';
-import { FolderOpen, Plus, Trash2, Edit2, Filter } from 'lucide-react';
+import { ProgressBar } from '@components/primitives/ProgressBar';
+import {
+  FolderOpen, Plus, Trash2, Edit2, Filter,
+  LayoutList, LayoutGrid, FileText, ListTodo, Clock,
+} from 'lucide-react';
 import { useLang } from '@/i18n';
+
+function getRelativeTime(dateStr: string): string {
+  const now = Date.now();
+  const date = new Date(dateStr).getTime();
+  const diffMs = now - date;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+
+  if (diffMin < 1) return '刚刚';
+  if (diffMin < 60) return `${diffMin} 分钟前`;
+  if (diffHour < 24) return `${diffHour} 小时前`;
+  if (diffDay < 30) return `${diffDay} 天前`;
+  return new Date(dateStr).toLocaleDateString();
+}
 
 export function ProjectsView() {
   const { t } = useLang();
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'project' | 'area'; id: string } | null>(null);
 
   const {
-    projects, filteredProjects, researchAreas,
+    projects, enrichedProjects, researchAreas,
+    viewMode, setViewMode,
     isAreaModalOpen, setIsAreaModalOpen,
     newAreaName, setNewAreaName,
     newAreaDesc, setNewAreaDesc,
@@ -37,6 +57,43 @@ export function ProjectsView() {
     handleDeleteProject, handleDeleteArea,
   } = useProjects();
 
+  const areaProjectCounts = useMemo(
+    () => Object.fromEntries(researchAreas.map(area => [area.id, projects.filter(p => p.areaId === area.id).length])),
+    [researchAreas, projects]
+  );
+
+  const areaOptionsForSelect = useMemo(
+    () => researchAreas.map(a => ({ value: a.id, label: a.name })),
+    [researchAreas]
+  );
+
+  const viewToggle = (
+    <div className="flex border border-slate-800 rounded-lg overflow-hidden">
+      <button
+        onClick={() => setViewMode('list')}
+        className={`px-2 py-1 flex items-center gap-1 text-xs transition ${
+          viewMode === 'list'
+            ? 'bg-primary-600/20 text-primary-400'
+            : 'text-slate-500 hover:text-slate-300'
+        }`}
+        title={t('projects.viewList')}
+      >
+        <LayoutList size={14} />
+      </button>
+      <button
+        onClick={() => setViewMode('card')}
+        className={`px-2 py-1 flex items-center gap-1 text-xs transition ${
+          viewMode === 'card'
+            ? 'bg-primary-600/20 text-primary-400'
+            : 'text-slate-500 hover:text-slate-300'
+        }`}
+        title={t('projects.viewCard')}
+      >
+        <LayoutGrid size={14} />
+      </button>
+    </div>
+  );
+
   return (
     <div>
       <PageHeader
@@ -44,13 +101,16 @@ export function ProjectsView() {
         description={t('projects.description')}
         icon={<FolderOpen size={18} />}
         actions={
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={() => setIsAreaModalOpen(true)} leftIcon={<Plus size={14} />}>
-              {t('projects.area')}
-            </Button>
-            <Button variant="primary" size="sm" onClick={() => { resetProjectForm(); setIsProjModalOpen(true); }} leftIcon={<Plus size={14} />}>
-              {t('projects.project')}
-            </Button>
+          <div className="flex items-center gap-3">
+            {viewToggle}
+            <div className="flex gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setIsAreaModalOpen(true)} leftIcon={<Plus size={14} />}>
+                {t('projects.area')}
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => { resetProjectForm(); setIsProjModalOpen(true); }} leftIcon={<Plus size={14} />}>
+                {t('projects.project')}
+              </Button>
+            </div>
           </div>
         }
       />
@@ -71,7 +131,7 @@ export function ProjectsView() {
               <Filter size={12} /> {t('common.all')} ({projects.length})
             </button>
             {researchAreas.map((area) => {
-              const count = projects.filter(p => p.areaId === area.id).length;
+              const count = areaProjectCounts[area.id] ?? 0;
               return (
                 <button
                   key={area.id}
@@ -98,8 +158,8 @@ export function ProjectsView() {
         </div>
       )}
 
-      {/* Projects Grid */}
-      {filteredProjects.length === 0 ? (
+      {/* Projects */}
+      {enrichedProjects.length === 0 ? (
         <EmptyState
           title={areaFilter ? t('projects.noAreaProjects') : t('projects.noProjects')}
           description={areaFilter ? t('projects.noAreaProjectsDesc') : t('projects.noProjectsDesc')}
@@ -111,9 +171,9 @@ export function ProjectsView() {
             )
           }
         />
-      ) : (
+      ) : viewMode === 'card' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredProjects.map((proj) => {
+          {enrichedProjects.map((proj) => {
             const area = researchAreas.find(a => a.id === proj.areaId);
             return (
               <Card key={proj.id} variant="solid" padding="md" hover="lift">
@@ -136,7 +196,7 @@ export function ProjectsView() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-2">
                   {proj.discipline && <Badge size="sm" variant="primary">{proj.discipline}</Badge>}
                   {area && (
                     <Badge size="sm">
@@ -148,11 +208,97 @@ export function ProjectsView() {
                   )}
                 </div>
                 {proj.hypothesis && (
-                  <p className="mt-2 text-2xs text-slate-400 italic line-clamp-2">{proj.hypothesis}</p>
+                  <p className="text-2xs text-slate-400 italic line-clamp-2 mb-3">{proj.hypothesis}</p>
                 )}
-                <p className="mt-2 text-3xs text-slate-500">
-                  {t('projects.updated')} {new Date(proj.updatedAt).toLocaleDateString()}
-                </p>
+                {/* Progress */}
+                <div className="mb-3">
+                  <ProgressBar
+                    value={proj.progress}
+                    color={proj.progress === 100 ? 'success' : 'primary'}
+                    size="sm"
+                    showValue
+                    label={t('projects.progress')}
+                  />
+                </div>
+                {/* Stats row */}
+                <div className="flex items-center gap-3 text-2xs text-slate-500">
+                  <span className="flex items-center gap-1">
+                    <ListTodo size={12} /> {proj.taskCount} {t('projects.tasks')}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <FileText size={12} /> {proj.recordCount} {t('projects.records')}
+                  </span>
+                  <span className="flex items-center gap-1 ml-auto">
+                    <Clock size={12} /> {getRelativeTime(proj.updatedAt)}
+                  </span>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {enrichedProjects.map((proj) => {
+            const area = researchAreas.find(a => a.id === proj.areaId);
+            return (
+              <Card key={proj.id} variant="solid" padding="sm" hover="subtle">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-slate-100 truncate">{proj.title}</h3>
+                      {proj.discipline && <Badge size="sm" variant="primary">{proj.discipline}</Badge>}
+                      {area && (
+                        <Badge size="sm">
+                          <span className="flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: area.color || '#14b8a6' }} />
+                            {area.name}
+                          </span>
+                        </Badge>
+                      )}
+                    </div>
+                    {proj.hypothesis && (
+                      <p className="text-2xs text-slate-400 italic truncate">{proj.hypothesis}</p>
+                    )}
+                  </div>
+                  {/* Progress bar compact */}
+                  <div className="w-24 shrink-0">
+                    <ProgressBar
+                      value={proj.progress}
+                      color={proj.progress === 100 ? 'success' : 'primary'}
+                      size="sm"
+                    />
+                    <span className="text-3xs text-slate-500 text-right block mt-0.5">{proj.progress}%</span>
+                  </div>
+                  {/* Stats */}
+                  <div className="flex items-center gap-3 text-2xs text-slate-500 shrink-0">
+                    <span className="flex items-center gap-1" title={t('projects.tasks')}>
+                      <ListTodo size={12} /> {proj.taskCount}
+                    </span>
+                    <span className="flex items-center gap-1" title={t('projects.records')}>
+                      <FileText size={12} /> {proj.recordCount}
+                    </span>
+                    <span className="flex items-center gap-1" title={t('projects.updated')}>
+                      <Clock size={12} /> {getRelativeTime(proj.updatedAt)}
+                    </span>
+                  </div>
+                  {/* Actions */}
+                  <div className="flex gap-1 shrink-0">
+                    <IconButton
+                      variant="ghost"
+                      size="sm"
+                      icon={<Edit2 size={13} />}
+                      aria-label="Edit project"
+                      onClick={() => openEditProject(proj)}
+                    />
+                    <IconButton
+                      variant="danger"
+                      size="sm"
+                      icon={<Trash2 size={13} />}
+                      aria-label="Delete project"
+                      onClick={() => setConfirmDelete({ type: 'project', id: proj.id })}
+                    />
+                  </div>
+                </div>
               </Card>
             );
           })}
@@ -206,7 +352,7 @@ export function ProjectsView() {
               onChange={(e) => setNewProjAreaId(e.target.value || null)}
               options={[
                 { value: '', label: t('projects.noArea') },
-                ...researchAreas.map(a => ({ value: a.id, label: a.name }))
+                ...areaOptionsForSelect
               ]}
             />
           )}

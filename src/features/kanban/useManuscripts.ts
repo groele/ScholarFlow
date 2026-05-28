@@ -21,6 +21,9 @@ export function useManuscripts() {
     authors: ''
   });
 
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
+
   // Group manuscripts by kanban status
   const kanbanColumns = useMemo(() => {
     // Build a map of latest submission per manuscript
@@ -117,6 +120,7 @@ export function useManuscripts() {
       setIsManuscriptModalOpen(false);
     } catch (e: unknown) {
       console.error('Failed to save manuscript:', e);
+      setError('Failed to save manuscript. Please try again.');
     }
   }, [editingManuscriptId, manuscriptForm, resetForm]);
 
@@ -129,6 +133,7 @@ export function useManuscripts() {
       }
     } catch (e: unknown) {
       console.error('Failed to delete manuscript:', e);
+      setError('Failed to delete manuscript. Please try again.');
     }
   }, []);
 
@@ -166,6 +171,7 @@ export function useManuscripts() {
       }
     } catch (e) {
       console.error('Failed to move manuscript:', e);
+      setError('Failed to move manuscript. Please try again.');
     }
   }, []);
 
@@ -184,5 +190,7 @@ export function useManuscripts() {
     resetForm,
     handleDeleteManuscript,
     handleMoveManuscript,
+    error,
+    clearError,
   };
 }

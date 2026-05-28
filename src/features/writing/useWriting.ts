@@ -27,6 +27,8 @@ export function useWriting() {
 
   const [selectedMsId, setSelectedMsId] = useState('');
   const [activeSectionId, setActiveSectionId] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
 
   const selectedManuscript = manuscripts.find(m => m.id === selectedMsId);
   const sections: Section[] = (selectedManuscript?.sections || []).sort((a, b) => a.order - b.order);
@@ -67,6 +69,7 @@ export function useWriting() {
       setActiveSectionId(templateSections[0].id);
     } catch (e: unknown) {
       console.error('Failed to apply template:', e);
+      setError('Failed to apply template. Please try again.');
     }
   }, [selectedMsId]);
 

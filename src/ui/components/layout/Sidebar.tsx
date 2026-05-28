@@ -11,6 +11,7 @@ import {
   Beaker,
   BookOpen,
   PenLine,
+  BookOpenCheck,
   BookMarked,
   Settings,
   Globe,
@@ -38,6 +39,7 @@ const labelKeys: Record<string, string> = {
   submissions: 'sidebar.submissions',
   evidence: 'sidebar.evidence',
   planning: 'sidebar.planning',
+  journal: 'sidebar.journal',
   reading: 'sidebar.reading',
   writing: 'sidebar.writing',
   citations: 'sidebar.citations',
@@ -51,6 +53,7 @@ const navGroups = [
     items: [
       { id: 'projects', icon: FolderOpen },
       { id: 'planning', icon: Beaker },
+      { id: 'journal', icon: BookOpenCheck },
     ]
   },
   {

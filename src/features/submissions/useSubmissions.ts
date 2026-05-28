@@ -19,6 +19,9 @@ export function useSubmissions() {
     notes: '',
   });
 
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
+
   const filtered = useMemo(() => {
     if (!search.trim()) return submissions;
     const q = search.toLowerCase();
@@ -72,6 +75,7 @@ export function useSubmissions() {
       setIsModalOpen(false);
     } catch (e: unknown) {
       console.error('Failed to save submission:', e);
+      setError('Failed to save submission. Please try again.');
     }
   }, [editingId, form, resetForm]);
 
@@ -80,6 +84,7 @@ export function useSubmissions() {
       await db.submissions.delete(id);
     } catch (e: unknown) {
       console.error('Failed to delete submission:', e);
+      setError('Failed to delete submission. Please try again.');
     }
   }, []);
 
@@ -95,6 +100,7 @@ export function useSubmissions() {
       await db.submissions.update(id, updates);
     } catch (e: unknown) {
       console.error('Failed to update submission status:', e);
+      setError('Failed to update submission status. Please try again.');
     }
   }, []);
 
@@ -114,5 +120,7 @@ export function useSubmissions() {
     resetForm,
     handleDelete,
     handleStatusChange,
+    error,
+    clearError,
   };
 }

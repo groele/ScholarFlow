@@ -3,9 +3,15 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@storage/dexie';
 import { generateId } from '@storage/id';
 
+export type ViewMode = 'list' | 'card';
+
 export function useProjects() {
   const projects = useLiveQuery(() => db.projects.where('userId').equals('user').toArray()) ?? [];
   const researchAreas = useLiveQuery(() => db.researchAreas.where('userId').equals('user').toArray()) ?? [];
+  const tasks = useLiveQuery(() => db.tasks.where('userId').equals('user').toArray()) ?? [];
+  const researchRecords = useLiveQuery(() => db.researchRecords.where('userId').equals('user').toArray()) ?? [];
+
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
 
   // Area modal state
   const [isAreaModalOpen, setIsAreaModalOpen] = useState(false);
@@ -22,6 +28,9 @@ export function useProjects() {
   const [newProjAbstract, setNewProjAbstract] = useState('');
   const [newProjAreaId, setNewProjAreaId] = useState<string | null>(null);
   const [areaFilter, setAreaFilter] = useState<string | null>(null);
+
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
 
   const resetAreaForm = useCallback(() => {
     setNewAreaName('');
@@ -65,6 +74,7 @@ export function useProjects() {
       setIsAreaModalOpen(false);
     } catch (e: any) {
       console.error('Failed to save area:', e);
+      setError('Failed to save research area. Please try again.');
     }
   }, [newAreaName, newAreaDesc, newAreaColor, resetAreaForm]);
 
@@ -72,6 +82,16 @@ export function useProjects() {
     areaFilter ? projects.filter(p => p.areaId === areaFilter) : projects,
     [projects, areaFilter]
   );
+
+  const enrichedProjects = useMemo(() => {
+    return filteredProjects.map(proj => {
+      const projTasks = tasks.filter(t => t.projectId === proj.id);
+      const completedTasks = projTasks.filter(t => t.status === 'completed').length;
+      const progress = projTasks.length > 0 ? Math.round((completedTasks / projTasks.length) * 100) : 0;
+      const recordCount = researchRecords.filter(r => r.projectId === proj.id).length;
+      return { ...proj, progress, taskCount: projTasks.length, recordCount };
+    });
+  }, [filteredProjects, tasks, researchRecords]);
 
   const handleSaveProject = useCallback(async () => {
     if (!newProjTitle.trim()) return;
@@ -93,6 +113,7 @@ export function useProjects() {
       setIsProjModalOpen(false);
     } catch (e: any) {
       console.error('Failed to save project:', e);
+      setError('Failed to save project. Please try again.');
     }
   }, [editingProjectId, newProjTitle, newProjDiscipline, newProjHypothesis, newProjAbstract, newProjAreaId, resetProjectForm]);
 
@@ -120,6 +141,7 @@ export function useProjects() {
       await db.projects.delete(id);
     } catch (e: any) {
       console.error('Failed to delete project:', e);
+      setError('Failed to delete project. Please try again.');
     }
   }, []);
 
@@ -133,13 +155,17 @@ export function useProjects() {
       await db.researchAreas.delete(id);
     } catch (e: any) {
       console.error('Failed to delete area:', e);
+      setError('Failed to delete research area. Please try again.');
     }
   }, []);
 
   return {
     projects,
     filteredProjects,
+    enrichedProjects,
     researchAreas,
+    // View mode
+    viewMode, setViewMode,
     // Area modal
     isAreaModalOpen,
     setIsAreaModalOpen,
@@ -163,5 +189,8 @@ export function useProjects() {
     // Delete
     handleDeleteProject,
     handleDeleteArea,
+    // Error state
+    error,
+    clearError,
   };
 }

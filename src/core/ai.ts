@@ -1,4 +1,5 @@
 import { loadSettings } from '@storage/settings';
+import { withRetry } from './retry';
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
@@ -18,6 +19,7 @@ class AICopilotClient {
 
   /**
    * Multi-turn chat completion with full conversation history
+   * Retries up to 3 times on transient network/rate-limit errors.
    */
   async generateChatCompletion(messages: ChatMessage[], jsonMode = false): Promise<string> {
     const settings = await loadSettings();
@@ -47,19 +49,28 @@ class AICopilotClient {
       requestBody.response_format = { type: 'json_object' };
     }
 
-    const response = await fetch(`${config.endpoint}/chat/completions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(requestBody)
+    return withRetry(async () => {
+      let response: Response;
+      try {
+        response = await fetch(`${config.endpoint}/chat/completions`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(requestBody)
+        });
+      } catch (e: unknown) {
+        const reason = e instanceof Error ? e.message : String(e);
+        throw new Error(`AI API request failed: ${reason}`);
+      }
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        const message = err.error?.message || `AI API returned status ${response.status}`;
+        throw new Error(message);
+      }
+
+      const result = await response.json();
+      return result.choices?.[0]?.message?.content || '';
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `AI API returned status ${response.status}`);
-    }
-
-    const result = await response.json();
-    return result.choices?.[0]?.message?.content || '';
   }
 
   /**

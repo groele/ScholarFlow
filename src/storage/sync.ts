@@ -155,24 +155,29 @@ class CloudSyncEngine {
     const fileProvider = settings.syncProviders?.files || { provider: 'local' as const, config: {} };
 
     if (fileProvider.provider === 'local') {
-      const fileId = generateId('file');
-      const fileSize = typeof fileData === 'string' ? fileData.length : fileData.byteLength;
-      const fileRecord: Evidence = {
-        id: fileId,
-        userId: 'user',
-        projectId: 'proj_general',
-        title: filename,
-        description: `Uploaded mock evidence file ${filename}`,
-        evidenceType: filename.toLowerCase().endsWith('.pdf') ? 'pdf' : 'url',
-        filePath: `chrome-extension://${chrome.runtime.id}/mock-local-file/${fileId}`,
-        fileSize,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      try {
+        const fileId = generateId('file');
+        const fileSize = typeof fileData === 'string' ? fileData.length : fileData.byteLength;
+        const fileRecord: Evidence = {
+          id: fileId,
+          userId: 'user',
+          projectId: 'proj_general',
+          title: filename,
+          description: `Uploaded mock evidence file ${filename}`,
+          evidenceType: filename.toLowerCase().endsWith('.pdf') ? 'pdf' : 'url',
+          filePath: `chrome-extension://${chrome.runtime.id}/mock-local-file/${fileId}`,
+          fileSize,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
 
-      await db.evidence.put(fileRecord);
-      chrome.runtime.sendMessage({ action: 'DATABASE_UPDATED' }).catch(() => {});
-      return { success: true, file: fileRecord };
+        await db.evidence.put(fileRecord);
+        chrome.runtime.sendMessage({ action: 'DATABASE_UPDATED' }).catch(() => {});
+        return { success: true, file: fileRecord };
+      } catch (e: unknown) {
+        console.error('Local file save error:', e);
+        return { success: false, error: `Failed to save file locally: ${getErrorMessage(e)}` };
+      }
     }
 
     try {
@@ -357,8 +362,18 @@ class CloudSyncEngine {
     if (!response.ok) throw new Error(`GitHub fetch failed: ${response.statusText}`);
 
     const data = await response.json() as GitHubContentResponse;
-    const decoded = atob(data.content.replace(/\s/g, ''));
-    const parsed = JSON.parse(decoded) as LocalDatabaseDump;
+    let decoded: string;
+    try {
+      decoded = atob(data.content.replace(/\s/g, ''));
+    } catch {
+      throw new Error('GitHub: failed to decode database file content (invalid base64)');
+    }
+    let parsed: LocalDatabaseDump;
+    try {
+      parsed = JSON.parse(decoded) as LocalDatabaseDump;
+    } catch {
+      throw new Error('GitHub: database file contains invalid JSON');
+    }
     parsed._github_sha = data.sha;
     return parsed;
   }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useRecords, type ReadingStatus } from './useRecords';
 import { useLang } from '@/i18n';
 import { PageHeader } from '@components/layout/PageHeader';
@@ -28,12 +28,29 @@ export function RecordsView() {
     handleToggleStar, handleReadingStatusChange,
   } = useRecords();
 
-  const statusConfig: Record<ReadingStatus, { label: string; variant: string; icon: React.ReactNode }> = {
+  const statusConfig = useMemo<Record<ReadingStatus, { label: string; variant: string; icon: React.ReactNode }>>(() => ({
     unread: { label: t('records.unread'), variant: 'default', icon: <BookOpen size={11} /> },
     reading: { label: t('records.reading'), variant: 'info', icon: <Eye size={11} /> },
     read: { label: t('records.read'), variant: 'success', icon: <CheckCircle2 size={11} /> },
     'to-reread': { label: t('records.toReread'), variant: 'warning', icon: <RotateCcw size={11} /> },
-  };
+  }), [t]);
+
+  const projectFilterOptions = useMemo(
+    () => projects.map(p => ({ value: p.id, label: p.title })),
+    [projects]
+  );
+
+  const typeFilterOptions = useMemo(
+    () => recordTypes.map(ty => ({ value: ty, label: ty.replace(/_/g, ' ') })),
+    [recordTypes]
+  );
+
+  const handleNewRecord = useCallback(() => { resetForm(); setIsRecordModalOpen(true); }, [resetForm, setIsRecordModalOpen]);
+  const handleCloseModal = useCallback(() => setIsRecordModalOpen(false), [setIsRecordModalOpen]);
+  const handleDeleteConfirm = useCallback(async () => {
+    if (deleteRecordId) await handleDeleteRecord(deleteRecordId);
+    setDeleteRecordId(null);
+  }, [deleteRecordId, handleDeleteRecord]);
 
   return (
     <div>
@@ -45,7 +62,7 @@ export function RecordsView() {
           <Button
             variant="primary"
             size="sm"
-            onClick={() => { resetForm(); setIsRecordModalOpen(true); }}
+            onClick={handleNewRecord}
             leftIcon={<Plus size={14} />}
           >
             {t('records.record')}
@@ -68,7 +85,7 @@ export function RecordsView() {
           onChange={(e) => setProjectFilter(e.target.value)}
           options={[
             { value: '', label: t('records.allProjects') },
-            ...projects.map(p => ({ value: p.id, label: p.title }))
+            ...projectFilterOptions
           ]}
           className="w-44"
         />
@@ -77,7 +94,7 @@ export function RecordsView() {
           onChange={(e) => setTypeFilter(e.target.value)}
           options={[
             { value: '', label: t('records.allTypes') },
-            ...recordTypes.map(ty => ({ value: ty, label: ty.replace(/_/g, ' ') }))
+            ...typeFilterOptions
           ]}
           className="w-40"
         />
@@ -172,10 +189,7 @@ export function RecordsView() {
       <ConfirmDialog
         isOpen={!!deleteRecordId}
         onClose={() => setDeleteRecordId(null)}
-        onConfirm={async () => {
-          if (deleteRecordId) await handleDeleteRecord(deleteRecordId);
-          setDeleteRecordId(null);
-        }}
+        onConfirm={handleDeleteConfirm}
         title={t('common.confirm') + ' — ' + t('common.delete')}
         description={t('records.deleteDesc')}
         confirmLabel={t('common.delete')}
@@ -185,7 +199,7 @@ export function RecordsView() {
       {/* Record Modal */}
       <Modal
         isOpen={isRecordModalOpen}
-        onClose={() => setIsRecordModalOpen(false)}
+        onClose={handleCloseModal}
         title={editingRecordId ? t('records.editRecord') : t('records.newRecord')}
         size="md"
       >
@@ -209,7 +223,7 @@ export function RecordsView() {
             onChange={(e) => setRecordForm({ ...recordForm, projectId: e.target.value })}
             options={[
               { value: '', label: t('kanban.noProject') },
-              ...projects.map(p => ({ value: p.id, label: p.title }))
+              ...projectFilterOptions
             ]}
           />
           <Input label={t('records.doi')} value={recordForm.doi} onChange={(e) => setRecordForm({ ...recordForm, doi: e.target.value })} placeholder={t('records.doiPlaceholder')} />
@@ -218,7 +232,7 @@ export function RecordsView() {
           <Input label={t('records.tagsLabel')} value={recordForm.tags} onChange={(e) => setRecordForm({ ...recordForm, tags: e.target.value })} placeholder={t('records.tagsPlaceholder')} hint={t('records.tagsHint')} />
         </div>
         <ModalFooter>
-          <Button variant="secondary" size="sm" onClick={() => setIsRecordModalOpen(false)}>{t('common.cancel')}</Button>
+          <Button variant="secondary" size="sm" onClick={handleCloseModal}>{t('common.cancel')}</Button>
           <Button variant="primary" size="sm" onClick={handleSaveRecord}>{editingRecordId ? t('common.update') : t('common.create')}</Button>
         </ModalFooter>
       </Modal>

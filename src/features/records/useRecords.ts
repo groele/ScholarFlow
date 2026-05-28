@@ -24,6 +24,9 @@ export function useRecords() {
     tags: ''
   });
 
+  const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
+
   const filteredRecords = useMemo(() => {
     let filtered = records;
 
@@ -99,6 +102,7 @@ export function useRecords() {
       setIsRecordModalOpen(false);
     } catch (e: unknown) {
       console.error('Failed to save record:', e);
+      setError('Failed to save record. Please try again.');
     }
   }, [editingRecordId, recordForm, resetForm]);
 
@@ -107,6 +111,7 @@ export function useRecords() {
       await db.researchRecords.delete(id);
     } catch (e: unknown) {
       console.error('Failed to delete record:', e);
+      setError('Failed to delete record. Please try again.');
     }
   }, []);
 
@@ -118,6 +123,7 @@ export function useRecords() {
       }
     } catch (e: unknown) {
       console.error('Failed to toggle star:', e);
+      setError('Failed to update star. Please try again.');
     }
   }, []);
 
@@ -126,6 +132,7 @@ export function useRecords() {
       await db.researchRecords.update(id, { readingStatus: status, updatedAt: new Date().toISOString() });
     } catch (e: unknown) {
       console.error('Failed to update reading status:', e);
+      setError('Failed to update reading status. Please try again.');
     }
   }, []);
 
@@ -151,5 +158,7 @@ export function useRecords() {
     handleDeleteRecord,
     handleToggleStar,
     handleReadingStatusChange,
+    error,
+    clearError,
   };
 }

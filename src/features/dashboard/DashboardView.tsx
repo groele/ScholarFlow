@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { useDashboardData } from './useDashboardData';
 import { PageHeader } from '@components/layout/PageHeader';
 import { StatCard } from '@components/layout/StatCard';
@@ -25,13 +25,6 @@ interface DashboardViewProps {
 export function DashboardView({ onNavigate }: DashboardViewProps) {
   const { t } = useLang();
 
-  const pipelineStages = [
-    { key: 'preparing', label: t('dashboard.preparing'), color: 'bg-slate-500' },
-    { key: 'submitted', label: t('dashboard.submitted'), color: 'bg-info-500' },
-    { key: 'under_review', label: t('dashboard.underReview'), color: 'bg-warning-500' },
-    { key: 'accepted', label: t('dashboard.accepted'), color: 'bg-success-500' },
-  ];
-
   const {
     projects, records, manuscripts, submissions, analyses,
     timelineAlerts, metrics, recentRecords, taskStats,
@@ -40,15 +33,39 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
     urgentTasks,
   } = useDashboardData();
 
-  // Pipeline counts for manuscripts
-  const pipelineCounts = pipelineStages.map(stage => ({
-    ...stage,
-    count: submissions.filter(s => s.status === stage.key).length,
-  }));
+  const pipelineStages = useMemo(() => [
+    { key: 'preparing', label: t('dashboard.preparing'), color: 'bg-slate-500' },
+    { key: 'submitted', label: t('dashboard.submitted'), color: 'bg-info-500' },
+    { key: 'under_review', label: t('dashboard.underReview'), color: 'bg-warning-500' },
+    { key: 'accepted', label: t('dashboard.accepted'), color: 'bg-success-500' },
+  ], [t]);
+
+  const pipelineCounts = useMemo(
+    () => pipelineStages.map(stage => ({
+      ...stage,
+      count: submissions.filter(s => s.status === stage.key).length,
+    })),
+    [pipelineStages, submissions]
+  );
 
   const taskCompletionPercent = taskStats.total > 0
     ? Math.round((taskStats.completed / taskStats.total) * 100)
     : 0;
+
+  const readingStatsChartData = useMemo(
+    () => [
+      { label: t('reading.unread'), value: readingStats.unread, color: '#64748b' },
+      { label: t('reading.reading'), value: readingStats.reading, color: '#3b82f6' },
+      { label: t('reading.read'), value: readingStats.read, color: '#10b981' },
+    ],
+    [t, readingStats]
+  );
+
+  const navigateRecords = useCallback(() => onNavigate?.('records'), [onNavigate]);
+  const navigateKanban = useCallback(() => onNavigate?.('kanban'), [onNavigate]);
+  const navigateProjects = useCallback(() => onNavigate?.('projects'), [onNavigate]);
+  const navigateSubmissions = useCallback(() => onNavigate?.('submissions'), [onNavigate]);
+  const navigateReading = useCallback(() => onNavigate?.('reading'), [onNavigate]);
 
   return (
     <div>
@@ -60,9 +77,9 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <StatCard label={t('dashboard.projects')} value={projects.length} icon={<FolderOpen size={16} />} onClick={() => onNavigate?.('projects')} />
-        <StatCard label={t('dashboard.records')} value={records.length} icon={<FileText size={16} />} onClick={() => onNavigate?.('records')} />
-        <StatCard label={t('dashboard.manuscripts')} value={manuscripts.length} icon={<Send size={16} />} onClick={() => onNavigate?.('kanban')} />
+        <StatCard label={t('dashboard.projects')} value={projects.length} icon={<FolderOpen size={16} />} onClick={navigateProjects} />
+        <StatCard label={t('dashboard.records')} value={records.length} icon={<FileText size={16} />} onClick={navigateRecords} />
+        <StatCard label={t('dashboard.manuscripts')} value={manuscripts.length} icon={<Send size={16} />} onClick={navigateKanban} />
         <StatCard label={t('dashboard.tasksDone')} value={`${taskStats.completed}/${taskStats.total}`} icon={<ListTodo size={16} />} />
       </div>
 
@@ -138,21 +155,21 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
           </div>
           <div className="space-y-1.5">
             <button
-              onClick={() => onNavigate?.('records')}
+              onClick={navigateRecords}
               className="w-full flex items-center justify-between p-1.5 rounded-md hover:bg-slate-800/60 transition-colors text-left group"
             >
               <span className="text-2xs text-slate-300 group-hover:text-slate-100">{t('dashboard.quickNewRecord')}</span>
               <ArrowRight size={11} className="text-slate-600 group-hover:text-primary-400 transition-colors" />
             </button>
             <button
-              onClick={() => onNavigate?.('kanban')}
+              onClick={navigateKanban}
               className="w-full flex items-center justify-between p-1.5 rounded-md hover:bg-slate-800/60 transition-colors text-left group"
             >
               <span className="text-2xs text-slate-300 group-hover:text-slate-100">{t('dashboard.quickNewManuscript')}</span>
               <ArrowRight size={11} className="text-slate-600 group-hover:text-primary-400 transition-colors" />
             </button>
             <button
-              onClick={() => onNavigate?.('projects')}
+              onClick={navigateProjects}
               className="w-full flex items-center justify-between p-1.5 rounded-md hover:bg-slate-800/60 transition-colors text-left group"
             >
               <span className="text-2xs text-slate-300 group-hover:text-slate-100">{t('dashboard.quickNewProject')}</span>
@@ -180,7 +197,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
       <Card variant="solid" padding="md" className="mb-6">
         <CardHeader>
           <CardTitle>
-            <button onClick={() => onNavigate?.('kanban')} className="flex items-center gap-2 hover:text-primary-400 transition-colors cursor-pointer">
+            <button onClick={navigateKanban} className="flex items-center gap-2 hover:text-primary-400 transition-colors cursor-pointer">
               <Columns3 size={14} className="text-primary-400" />
               {t('dashboard.manuscriptPipeline')}
               <ChevronRight size={12} className="text-slate-600" />
@@ -198,7 +215,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
               {pipelineCounts.map(stage => (
                 <button
                   key={stage.key}
-                  onClick={() => onNavigate?.('kanban')}
+                  onClick={navigateKanban}
                   className="text-center p-3 rounded-lg border border-slate-800 bg-slate-900/40 hover:border-primary-600/30 hover:bg-slate-800/60 transition-all cursor-pointer"
                 >
                   <div className={`w-2.5 h-2.5 rounded-full ${stage.color} mx-auto mb-2`} />
@@ -215,13 +232,13 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
       {(metrics.avgExpToSubmit !== null || metrics.avgSubmitToAccept !== null) && (
         <div className="grid grid-cols-2 gap-3 mb-6">
           {metrics.avgExpToSubmit !== null && (
-            <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={() => onNavigate?.('submissions')}>
+            <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={navigateSubmissions}>
               <p className="text-2xs font-semibold uppercase tracking-wider text-slate-400">{t('dashboard.avgExpToSubmit')}</p>
               <p className="mt-1.5 text-xl font-bold text-primary-400 font-display">{metrics.avgExpToSubmit} {t('dashboard.days')}</p>
             </Card>
           )}
           {metrics.avgSubmitToAccept !== null && (
-            <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={() => onNavigate?.('submissions')}>
+            <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={navigateSubmissions}>
               <p className="text-2xs font-semibold uppercase tracking-wider text-slate-400">{t('dashboard.avgSubmitToAccept')}</p>
               <p className="mt-1.5 text-xl font-bold text-success-400 font-display">{metrics.avgSubmitToAccept} {t('dashboard.days')}</p>
             </Card>
@@ -233,7 +250,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
       {analyses.length > 0 && (
         <div className="space-y-3 mb-6">
           <button
-            onClick={() => onNavigate?.('submissions')}
+            onClick={navigateSubmissions}
             className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2 hover:text-primary-400 transition-colors cursor-pointer"
           >
             <Clock size={13} /> {t('dashboard.activeSubmissions')}
@@ -245,7 +262,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
               analysis={analysis}
               manuscriptTitle={manuscript?.title}
               journal={submission.journal}
-              onClick={() => onNavigate?.('submissions')}
+              onClick={navigateSubmissions}
             />
           ))}
         </div>
@@ -265,7 +282,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
               {timelineAlerts.map(({ submission, manuscript, analysis }) => (
                 <button
                   key={submission.id}
-                  onClick={() => onNavigate?.('submissions')}
+                  onClick={navigateSubmissions}
                   className="w-full flex items-center justify-between p-2.5 rounded-lg border border-slate-800 bg-slate-900/40 hover:border-primary-600/30 hover:bg-slate-800/60 transition-all cursor-pointer text-left"
                 >
                   <div className="flex-1 min-w-0">
@@ -290,7 +307,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
       {/* Analytics Charts */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         {/* Monthly Trend */}
-        <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={() => onNavigate?.('records')}>
+        <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={navigateRecords}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp size={14} className="text-primary-400" />
@@ -303,7 +320,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
         </Card>
 
         {/* Record Type Distribution */}
-        <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={() => onNavigate?.('records')}>
+        <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={navigateRecords}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText size={14} className="text-info-400" />
@@ -329,7 +346,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
       {/* Project Progress + Reading Stats */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         {/* Per-Project Records */}
-        <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={() => onNavigate?.('projects')}>
+        <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={navigateProjects}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FolderOpen size={14} className="text-warning-400" />
@@ -346,7 +363,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
         </Card>
 
         {/* Reading Progress */}
-        <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={() => onNavigate?.('reading')}>
+        <Card variant="solid" padding="md" hover="subtle" className="cursor-pointer" onClick={navigateReading}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BookOpen size={14} className="text-success-400" />
@@ -356,11 +373,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
           <CardContent>
             {readingStats.total > 0 ? (
               <ChartDonut
-                data={[
-                  { label: t('reading.unread'), value: readingStats.unread, color: '#64748b' },
-                  { label: t('reading.reading'), value: readingStats.reading, color: '#3b82f6' },
-                  { label: t('reading.read'), value: readingStats.read, color: '#10b981' },
-                ]}
+                data={readingStatsChartData}
                 size={110}
                 thickness={16}
                 centerValue={String(readingStats.total)}
@@ -402,7 +415,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
       <Card variant="solid" padding="md">
         <CardHeader>
           <CardTitle>
-            <button onClick={() => onNavigate?.('records')} className="flex items-center gap-2 hover:text-primary-400 transition-colors cursor-pointer">
+            <button onClick={navigateRecords} className="flex items-center gap-2 hover:text-primary-400 transition-colors cursor-pointer">
               <FileText size={14} className="text-slate-400" />
               {t('dashboard.recentRecords')}
               <ChevronRight size={12} className="text-slate-600" />
@@ -420,7 +433,7 @@ export function DashboardView({ onNavigate }: DashboardViewProps) {
               {recentRecords.map((rec) => (
                 <button
                   key={rec.id}
-                  onClick={() => onNavigate?.('records')}
+                  onClick={navigateRecords}
                   className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/40 transition-colors cursor-pointer text-left"
                 >
                   <div className="flex-1 min-w-0">
